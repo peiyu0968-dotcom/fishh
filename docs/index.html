@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>臺北市各行政區人口與戶數</title>
+<style>
+:root{
+  --bg:#ecf0f3; --panel:#ffffff; --ink:#15212b; --muted:#5a6a75; --line:#cdd6dc; --soft:#f4f7f9;
+  --blue:#0070bd; --red:#e3002c; --green:#008659; --orange:#f2a900; --brown:#8a5a2b;
+  --focus:#0070bd;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+  font-size:15px; line-height:1.65; font-variant-numeric:tabular-nums;
+}
+.wrap{max-width:1240px; margin:0 auto; padding:0 16px}
+.stripe{display:flex; height:8px}
+.stripe i{flex:1}
+header.top{padding:24px 0 8px}
+h1{margin:0; font-size:clamp(26px,5vw,40px); line-height:1.2; font-weight:800; letter-spacing:.02em}
+.period{margin:8px 0 0; color:var(--muted)}
+.period b{color:var(--ink); font-weight:700}
+#notice{margin:12px 0 0; padding:10px 14px; border-left:4px solid var(--red); background:#fff; font-weight:600}
+#notice[hidden]{display:none}
+#notice p{margin:2px 0}
+
+/* filters */
+.filters{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:16px; margin-top:16px; display:grid; gap:18px}
+.f-row{display:flex; flex-wrap:wrap; gap:16px 28px; align-items:flex-end}
+.field{border:0; margin:0; padding:0; min-width:0}
+.field>legend,.field>label.lbl{display:block; padding:0; margin:0 0 6px; font-size:13px; font-weight:700; color:var(--muted)}
+.field .hint{font-weight:400}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip,.seg button,.btn,.tog button{font:inherit; cursor:pointer}
+.chip{padding:4px 12px; border:1.5px solid var(--line); background:#fff; border-radius:999px; color:var(--ink); min-height:34px}
+.chip[aria-pressed="true"]{background:var(--blue); border-color:var(--blue); color:#fff; font-weight:700}
+.seg{display:inline-flex; border:1.5px solid var(--line); border-radius:6px; overflow:hidden}
+.seg button{border:0; background:#fff; padding:6px 16px; min-height:36px; color:var(--ink)}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink); color:#fff; font-weight:700}
+select{font:inherit; min-height:36px; padding:4px 10px; border:1.5px solid var(--line); border-radius:6px; background:#fff; color:var(--ink)}
+.btn{min-height:36px; padding:6px 16px; border:1.5px solid var(--ink); background:#fff; color:var(--ink); border-radius:6px; font-weight:700}
+.btn:hover{background:var(--ink); color:#fff}
+:is(.chip,.seg button,.btn,select,.tog button):focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+
+/* route-map month slider */
+.range-head{display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 16px; margin-bottom:2px}
+.range-head output{font-weight:700}
+.route{padding:0 11px}
+.route-track{position:relative; height:36px}
+.route-line{position:absolute; left:0; right:0; top:16px; height:4px; background:var(--line); border-radius:2px}
+.route-fill{position:absolute; top:16px; height:4px; background:var(--blue)}
+.stop{position:absolute; top:12px; width:12px; height:12px; margin-left:-6px; border-radius:50%; background:#fff; border:2.5px solid #9aa8b1}
+.stop.in{border-color:var(--blue)}
+.route input[type=range]{
+  position:absolute; left:-11px; top:0; width:calc(100% + 22px); height:36px; margin:0;
+  background:none; pointer-events:none; -webkit-appearance:none; appearance:none;
+}
+.route input[type=range]::-webkit-slider-runnable-track{background:transparent; height:36px}
+.route input[type=range]::-moz-range-track{background:transparent; height:36px}
+.route input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; pointer-events:auto; width:24px; height:24px; margin-top:6px; border-radius:50%;
+  background:#fff; border:6px solid var(--blue); cursor:grab; box-shadow:0 0 0 1px #fff;
+}
+.route input[type=range]::-moz-range-thumb{
+  pointer-events:auto; width:12px; height:12px; border-radius:50%; background:#fff; border:6px solid var(--blue); cursor:grab;
+}
+.route input[type=range]:focus-visible::-webkit-slider-thumb{outline:3px solid var(--ink); outline-offset:2px}
+.route input[type=range]:focus-visible::-moz-range-thumb{outline:3px solid var(--ink); outline-offset:2px}
+.route-labels{position:relative; height:20px; margin-top:2px}
+.route-labels span{position:absolute; transform:translateX(-50%); font-size:12px; color:var(--muted); white-space:nowrap}
+.route-labels span.in{color:var(--ink); font-weight:700}
+
+.scope{margin:14px 0 0; color:var(--muted); font-size:14px}
+.scope b{color:var(--ink)}
+
+/* cards */
+.grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:12px}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:16px; display:flex; flex-direction:column; min-width:0; border-top:4px solid var(--c,var(--blue))}
+.card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:8px 12px; flex-wrap:wrap}
+.card h2{margin:0; font-size:18px; line-height:1.4; font-weight:800}
+.tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px}
+.tag{font-size:12px; padding:0 8px; border-radius:4px; background:var(--soft); border:1px solid var(--line); color:var(--muted)}
+.tag.strong{background:#fff3d6; border-color:#e5c26a; color:#5b4300; font-weight:700}
+.tog{display:inline-flex; border:1.5px solid var(--line); border-radius:6px; overflow:hidden; flex:none}
+.tog button{border:0; background:#fff; padding:2px 12px; min-height:32px; font-size:13px; color:var(--ink)}
+.tog button+button{border-left:1.5px solid var(--line)}
+.tog button[aria-pressed="true"]{background:var(--ink); color:#fff; font-weight:700}
+.chart-box{position:relative; margin-top:8px}
+.chart{height:360px; width:100%}
+.empty{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:16px; background:var(--panel); color:var(--muted); font-weight:600}
+.empty[hidden]{display:none}
+.note{margin:8px 0 0; font-size:12.5px; color:var(--muted); line-height:1.6}
+.note[hidden]{display:none}
+
+footer{margin:24px 0 40px; padding-top:16px; border-top:2px solid var(--ink); color:var(--muted); font-size:13.5px}
+footer p{margin:4px 0}
+footer a{color:var(--blue); font-weight:700}
+footer a:focus-visible{outline:3px solid var(--focus); outline-offset:2px}
+
+@media (max-width:820px){
+  .grid{grid-template-columns:1fr}
+  .chart{height:330px}
+}
+@media (max-width:520px){
+  .wrap{padding:0 12px}
+  .filters{padding:12px}
+  .f-row{gap:14px}
+  .route-labels small{display:none}
+  .card{padding:12px}
+  .seg button{padding:6px 12px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="stripe" aria-hidden="true">
+  <i style="background:#e3002c"></i><i style="background:#0070bd"></i><i style="background:#008659"></i><i style="background:#f2a900"></i><i style="background:#8a5a2b"></i>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <h1>臺北市各行政區人口與戶數</h1>
+    <p class="period" id="period">資料期間：載入中…</p>
+    <div id="notice" role="alert" hidden></div>
+  </header>
+
+  <noscript><p id="noscript">此頁面需要啟用 JavaScript 才能顯示圖表。</p></noscript>
+
+  <section class="filters" aria-label="全域篩選">
+    <div class="f-row">
+      <fieldset class="field" style="flex:1 1 100%">
+        <legend>行政區 <span class="hint">（可複選；沒選就是全市 12 區）</span></legend>
+        <div class="chips" id="chips"></div>
+      </fieldset>
+    </div>
+    <div class="f-row">
+      <fieldset class="field"><legend>性別</legend><div class="seg" id="seg-gender" role="group" aria-label="性別"></div></fieldset>
+      <fieldset class="field"><legend>顯示方式</legend><div class="seg" id="seg-mode" role="group" aria-label="顯示方式"></div></fieldset>
+      <div class="field"><label class="lbl" for="sel-compare">比較月份</label><select id="sel-compare"></select></div>
+      <div class="field"><button class="btn" id="btn-reset" type="button">重設篩選</button></div>
+    </div>
+    <div class="field">
+      <div class="range-head"><span class="lbl" style="font-size:13px;font-weight:700;color:var(--muted)">月份區間（拖拉兩端）</span><output id="range-out" for="rs re"></output></div>
+      <div class="route">
+        <div class="route-track" id="route-track">
+          <div class="route-line"></div><div class="route-fill" id="route-fill"></div>
+          <div id="stops"></div>
+          <input type="range" id="rs" aria-label="起始月份" min="0" max="0" step="1" value="0">
+          <input type="range" id="re" aria-label="結束月份" min="0" max="0" step="1" value="0">
+        </div>
+        <div class="route-labels" id="route-labels"></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="scope" id="scope"></p>
+
+  <main class="grid">
+    <section class="card" style="--c:var(--green)" id="card-pop" aria-labelledby="t-pop">
+      <div class="card-head">
+        <div><h2 id="t-pop">人口數消長</h2><div class="tags"><span class="tag" id="tag-pop">總人口</span><span class="tag">單位：人</span></div></div>
+        <div class="tog" data-card="pop" role="group" aria-label="人口數消長圖型"><button type="button" data-type="line">折線</button><button type="button" data-type="bar">長條</button></div>
+      </div>
+      <div class="chart-box"><div class="chart" id="ch-pop" role="img" aria-label="人口數消長圖"></div><div class="empty" hidden></div></div>
+      <p class="note">各月份為不同時間點的統計，不能相加。</p>
+    </section>
+
+    <section class="card" style="--c:var(--brown)" id="card-hh" aria-labelledby="t-hh">
+      <div class="card-head">
+        <div><h2 id="t-hh">戶數消長</h2><div class="tags"><span class="tag strong">戶數不分性別</span><span class="tag">單位：戶</span></div></div>
+        <div class="tog" data-card="hh" role="group" aria-label="戶數消長圖型"><button type="button" data-type="line">折線</button><button type="button" data-type="bar">長條</button></div>
+      </div>
+      <div class="chart-box"><div class="chart" id="ch-hh" role="img" aria-label="戶數消長圖"></div><div class="empty" hidden></div></div>
+      <p class="note">戶數不分性別，不受性別篩選影響；地區與月份區間則會套用。</p>
+    </section>
+
+    <section class="card" style="--c:var(--orange)" id="card-dist" aria-labelledby="t-dist">
+      <div class="card-head">
+        <div><h2 id="t-dist">各行政區人口分佈</h2><div class="tags"><span class="tag" id="tag-dist">總人口</span><span class="tag">單位：人</span></div></div>
+        <div class="tog" data-card="dist" role="group" aria-label="人口分佈圖型"><button type="button" data-type="pie">圓餅</button><button type="button" data-type="bar">長條</button></div>
+      </div>
+      <div class="chart-box"><div class="chart" id="ch-dist" role="img" aria-label="各行政區人口分佈圖"></div><div class="empty" hidden></div></div>
+      <p class="note" id="note-rest" hidden></p>
+      <p class="note" id="note-dist"></p>
+    </section>
+
+    <section class="card" style="--c:var(--red)" id="card-chg" aria-labelledby="t-chg">
+      <div class="card-head">
+        <div><h2 id="t-chg">各行政區人口增減率</h2><div class="tags"><span class="tag" id="tag-chg">總人口</span><span class="tag">期初到期末</span></div></div>
+        <div class="tog" data-card="chg" role="group" aria-label="人口增減率圖型"><button type="button" data-type="bar">長條</button><button type="button" data-type="scatter">散佈</button></div>
+      </div>
+      <div class="chart-box"><div class="chart" id="ch-chg" role="img" aria-label="各行政區人口增減率圖"></div><div class="empty" hidden></div></div>
+      <p class="note" id="note-chg"></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>資料來源：臺北市「115年各行政區戶籍人口數、戶數統計表」。</p>
+    <p id="foot-months">載入的資料月份：載入中…</p>
+    <p>本資料為戶籍人口，不等同於實際居住人口。</p>
+    <p><a href="https://github.com/peiyu0968-dotcom/fishh" target="_blank" rel="noopener">在 GitHub 專案頁下載原始資料</a></p>
+  </footer>
+</div>
+
+<script src="./data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var noticeEl = $('notice');
+  function notify(msg) {
+    var p = document.createElement('p');
+    p.textContent = msg;
+    noticeEl.appendChild(p);
+    noticeEl.hidden = false;
+  }
+
+  /* ---------- 資料檢查 ---------- */
+  var D = window.TAIPEI_POPULATION_DATA;
+  if (!D || !Array.isArray(D.rows) || !D.rows.length) {
+    $('period').textContent = '資料期間：無法取得';
+    $('foot-months').textContent = '載入的資料月份：無';
+    notify('資料檔載入失敗：找不到 data.js 的資料。請確認 data.js 與 index.html 放在同一個資料夾，再重新整理頁面。');
+    return;
+  }
+
+  var ORDER = ['松山區','信義區','大安區','中山區','中正區','大同區','萬華區','文山區','南港區','內湖區','士林區','北投區'];
+  var present = Array.from(new Set(D.rows.map(function (r) { return r.district; })));
+  var DISTRICTS = ORDER.filter(function (d) { return present.indexOf(d) >= 0; })
+    .concat(present.filter(function (d) { return ORDER.indexOf(d) < 0; }));
+  var PALETTE = ['#0070bd','#e3002c','#008659','#f2a900','#8a5a2b','#7b4fa3','#00a6b5','#e86aa6','#6b8e23','#ff7f2a','#3f4b8c','#2e8b8b'];
+  var DCOLOR = {};
+  DISTRICTS.forEach(function (d, i) { DCOLOR[d] = PALETTE[i % PALETTE.length]; });
+  var OTHER = '其餘行政區', OTHER_COLOR = '#9aa8b1';
+
+  var monthMap = new Map();
+  D.rows.forEach(function (r) { monthMap.set(r.year * 100 + r.month, { year: r.year, month: r.month }); });
+  var MONTHS = Array.from(monthMap.keys()).sort(function (a, b) { return a - b; }).map(function (k) { return monthMap.get(k); });
+  var N = MONTHS.length;
+  var midx = new Map();
+  MONTHS.forEach(function (m, i) { midx.set(m.year * 100 + m.month, i); });
+  var cell = new Map();
+  D.rows.forEach(function (r) { cell.set(midx.get(r.year * 100 + r.month) + '|' + r.district, r); });
+
+  function roc(y) { return y - 1911; }
+  function full(i) { return roc(MONTHS[i].year) + '年' + MONTHS[i].month + '月'; }
+  var sameYear = MONTHS.every(function (m) { return m.year === MONTHS[0].year; });
+  function axisLabel(i) { return sameYear ? MONTHS[i].month + '月' : full(i); }
+  function fmt(n) { return Number(n).toLocaleString('en-US'); }
+  function pct(v) { return (v > 0 ? '+' : '') + v.toFixed(2) + '%'; }
+  function signed(n) { return (n > 0 ? '+' : n < 0 ? '−' : '') + fmt(Math.abs(n)); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  var FIELD = { all: 'population_total', f: 'population_female', m: 'population_male' };
+  var GLABEL = { all: '總人口', f: '女性人口', m: '男性人口' };
+  var GCOLOR = { all: '#0070bd', f: '#d6336c', m: '#5c6bc0' };
+  var HH_COLOR = '#8a5a2b';
+
+  function get(i, d, f) {
+    var r = cell.get(i + '|' + d);
+    if (!r) return null;
+    var v = r[f];
+    return (typeof v === 'number' && isFinite(v)) ? v : null;
+  }
+  // 同一月份加總；只要有一區缺資料就回傳 null，不當成 0
+  function sumAt(i, ds, f) {
+    var s = 0;
+    for (var k = 0; k < ds.length; k++) {
+      var v = get(i, ds[k], f);
+      if (v === null) return null;
+      s += v;
+    }
+    return s;
+  }
+
+  /* ---------- 頁首／頁尾 ---------- */
+  var first = MONTHS[0], last = MONTHS[N - 1];
+  var spanText = N === 1 ? '民國 ' + roc(first.year) + ' 年 ' + first.month + ' 月'
+    : (first.year === last.year
+      ? '民國 ' + roc(first.year) + ' 年 ' + first.month + ' 月至 ' + last.month + ' 月'
+      : '民國 ' + roc(first.year) + ' 年 ' + first.month + ' 月至 ' + roc(last.year) + ' 年 ' + last.month + ' 月');
+  $('period').innerHTML = '資料期間：<b>' + spanText + '</b>（西元 ' + first.year + (last.year !== first.year ? '–' + last.year : '') + ' 年），共 ' + N + ' 個月，臺北市 ' + DISTRICTS.length + ' 個行政區';
+  $('foot-months').textContent = '載入的資料月份：' + MONTHS.map(function (_, i) { return full(i); }).join('、') + '（共 ' + N + ' 個月）。其餘月份沒有數值，未列入。';
+
+  if (typeof echarts === 'undefined') {
+    notify('圖表元件 ECharts 載入失敗（可能沒有網路），目前無法顯示圖表。');
+    return;
+  }
+
+  /* ---------- 狀態 ---------- */
+  var state, types = { pop: 'line', hh: 'line', dist: 'pie', chg: 'bar' };
+  function freshState() {
+    return { districts: new Set(), gender: 'all', mode: 'sum', start: 0, end: N - 1, compare: N - 1, touched: false };
+  }
+  state = freshState();
+  function active() { return state.districts.size ? DISTRICTS.filter(function (d) { return state.districts.has(d); }) : DISTRICTS.slice(); }
+  function rangeIdx() { var a = []; for (var i = state.start; i <= state.end; i++) a.push(i); return a; }
+
+  /* ---------- 篩選列 UI ---------- */
+  var chipsEl = $('chips');
+  DISTRICTS.forEach(function (d) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'chip'; b.textContent = d; b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', function () {
+      if (state.districts.has(d)) state.districts.delete(d); else state.districts.add(d);
+      update();
+    });
+    chipsEl.appendChild(b);
+  });
+  function makeSeg(el, items, key) {
+    items.forEach(function (it) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = it[1]; b.dataset.v = it[0]; b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', function () { state[key] = it[0]; update(); });
+      el.appendChild(b);
+    });
+  }
+  makeSeg($('seg-gender'), [['all', '全部'], ['f', '女'], ['m', '男']], 'gender');
+  makeSeg($('seg-mode'), [['sum', '合計'], ['split', '分區比較']], 'mode');
+
+  var rs = $('rs'), re = $('re');
+  rs.max = re.max = String(N - 1);
+  var stopsEl = $('stops'), labelsEl = $('route-labels');
+  function pos(i) { return N === 1 ? 50 : i / (N - 1) * 100; }
+  MONTHS.forEach(function (m, i) {
+    var s = document.createElement('div'); s.className = 'stop'; s.style.left = pos(i) + '%'; stopsEl.appendChild(s);
+    var l = document.createElement('span'); l.style.left = pos(i) + '%';
+    l.innerHTML = (sameYear ? m.month : roc(m.year) + '/' + m.month) + '<small>月</small>';
+    labelsEl.appendChild(l);
+  });
+  if (N === 1) { rs.disabled = true; re.disabled = true; }
+  rs.addEventListener('input', function () {
+    state.start = Math.min(+rs.value, state.end); update();
+  });
+  re.addEventListener('input', function () {
+    state.end = Math.max(+re.value, state.start); update();
+  });
+  $('sel-compare').addEventListener('change', function (e) {
+    state.compare = +e.target.value; state.touched = true; update();
+  });
+  $('btn-reset').addEventListener('click', function () { state = freshState(); update(); });
+  document.querySelectorAll('.tog').forEach(function (g) {
+    g.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () { types[g.dataset.card] = b.dataset.type; update(); });
+    });
+  });
+
+  function syncUI() {
+    // 比較月份：必須落在月份區間內；沒手動選過就跟著區間最後一個月
+    if (!state.touched || state.compare < state.start || state.compare > state.end) {
+      state.compare = state.end; state.touched = false;
+    }
+    Array.prototype.forEach.call(chipsEl.children, function (b) { b.setAttribute('aria-pressed', String(state.districts.has(b.textContent))); });
+    ['gender', 'mode'].forEach(function (k) {
+      Array.prototype.forEach.call($('seg-' + k).children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === state[k])); });
+    });
+    document.querySelectorAll('.tog').forEach(function (g) {
+      Array.prototype.forEach.call(g.children, function (b) { b.setAttribute('aria-pressed', String(b.dataset.type === types[g.dataset.card])); });
+    });
+    rs.value = state.start; re.value = state.end;
+    var startOnTop = state.start > (N - 1) / 2;
+    rs.style.zIndex = startOnTop ? 4 : 2; re.style.zIndex = 3;
+    var l = pos(state.start), r = pos(state.end);
+    $('route-fill').style.left = l + '%'; $('route-fill').style.width = (r - l) + '%';
+    Array.prototype.forEach.call(stopsEl.children, function (s, i) { s.classList.toggle('in', i >= state.start && i <= state.end); });
+    Array.prototype.forEach.call(labelsEl.children, function (s, i) { s.classList.toggle('in', i >= state.start && i <= state.end); });
+    $('range-out').textContent = state.start === state.end ? full(state.start) : full(state.start) + ' 至 ' + full(state.end);
+    var sel = $('sel-compare'), html = '';
+    rangeIdx().forEach(function (i) { html += '<option value="' + i + '"' + (i === state.compare ? ' selected' : '') + '>' + full(i) + '</option>'; });
+    sel.innerHTML = html;
+    var ds = active();
+    $('scope').innerHTML = '目前範圍：<b>' + (state.districts.size ? '已選 ' + ds.length + ' 區（' + ds.join('、') + '）' : '臺北市全市 ' + ds.length + ' 區') +
+      '</b>，<b>' + (state.gender === 'all' ? '全部性別' : state.gender === 'f' ? '女性' : '男性') + '</b>，<b>' + $('range-out').textContent + '</b>，' +
+      (state.mode === 'sum' ? '合計顯示' : '分區比較');
+    ['pop', 'dist', 'chg'].forEach(function (k) { $('tag-' + k).textContent = GLABEL[state.gender]; });
+  }
+
+  /* ---------- 圖表 ---------- */
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var charts = {};
+  ['pop', 'hh', 'dist', 'chg'].forEach(function (k) {
+    charts[k] = echarts.init($('ch-' + k), null, { renderer: 'canvas' });
+    if (window.ResizeObserver) new ResizeObserver(function () { charts[k].resize(); }).observe($('ch-' + k));
+  });
+  window.addEventListener('resize', function () { Object.keys(charts).forEach(function (k) { charts[k].resize(); }); });
+
+  var BASE = { animation: !reduce, animationDuration: 500, animationDurationUpdate: 600, animationEasingUpdate: 'cubicInOut', textStyle: { fontFamily: 'inherit' } };
+  function apply(k, typeKey, opt) {
+    var c = charts[k], rm = ['series'];
+    if (c.__t !== typeKey) rm.push('xAxis', 'yAxis', 'grid', 'legend');
+    c.__t = typeKey;
+    c.setOption(Object.assign({}, BASE, opt), { replaceMerge: rm });
+  }
+  function emptyBox(k) { return $('ch-' + k).parentNode.querySelector('.empty'); }
+  function showEmpty(k, msg) {
+    var e = emptyBox(k); e.textContent = msg; e.hidden = false;
+    charts[k].setOption({ series: [] }, { replaceMerge: ['series'] });
+    charts[k].dispatchAction({ type: 'hideTip' });
+  }
+  function hideEmpty(k) { emptyBox(k).hidden = true; }
+  function yFmt(v) { return Math.abs(v) >= 10000 ? +(v / 10000).toFixed(2) + '萬' : v; }
+
+  function renderSeries(k, field, color, unit) {
+    var ds = active(), idx = rangeIdx(), type = types[k], split = state.mode === 'split';
+    var labels = idx.map(axisLabel), series, names;
+    if (!split) {
+      var nm = state.districts.size ? '已選 ' + ds.length + ' 區合計' : '臺北市全市合計';
+      names = [nm];
+      series = [{ id: k + '-sum', name: nm, data: idx.map(function (i) { return sumAt(i, ds, field); }), color: color }];
+    } else {
+      names = ds;
+      series = ds.map(function (d) { return { id: k + '-' + d, name: d, data: idx.map(function (i) { return get(i, d, field); }), color: DCOLOR[d] }; });
+    }
+    var hasData = series.some(function (s) { return s.data.some(function (v) { return v !== null; }); });
+    if (!hasData) return showEmpty(k, '所選條件沒有可顯示的資料');
+    hideEmpty(k);
+    series = series.map(function (s) {
+      var o = { id: s.id, name: s.name, type: type, data: s.data, universalTransition: { enabled: true }, itemStyle: { color: s.color } };
+      if (type === 'line') { o.symbol = 'circle'; o.symbolSize = 7; o.lineStyle = { width: 2.5, color: s.color }; o.connectNulls = false; }
+      else { o.barMaxWidth = 36; }
+      return o;
+    });
+    apply(k, 'ts', {
+      tooltip: { trigger: 'axis', axisPointer: { type: type === 'line' ? 'line' : 'shadow' }, valueFormatter: function (v) { return v == null ? '無資料' : fmt(v) + ' ' + unit; } },
+      legend: { show: split, type: 'scroll', bottom: 0, data: names },
+      grid: { left: 8, right: 16, top: 20, bottom: split ? 40 : 8, containLabel: true },
+      xAxis: { type: 'category', data: labels, axisTick: { alignWithLabel: true } },
+      yAxis: { type: 'value', scale: type === 'line', axisLabel: { formatter: yFmt }, splitLine: { lineStyle: { color: '#e3e9ed' } } },
+      series: series
+    });
+  }
+
+  function memberStats(i, members) {
+    var t = sumAt(i, members, 'population_total'), m = sumAt(i, members, 'population_male'), f = sumAt(i, members, 'population_female');
+    if (t === null || m === null || f === null || t === 0) return '';
+    return '男 ' + (m / t * 100).toFixed(2) + '%／女 ' + (f / t * 100).toFixed(2) + '%';
+  }
+
+  function renderDist() {
+    var i = state.compare, f = FIELD[state.gender], type = types.dist;
+    $('t-dist').textContent = '各行政區人口分佈（' + full(i) + '）';
+    var items = active().map(function (d) { return { d: d, v: get(i, d, f) }; })
+      .filter(function (x) { return x.v !== null; }).sort(function (a, b) { return b.v - a.v; });
+    var restNote = $('note-rest');
+    if (!items.length) { restNote.hidden = true; return showEmpty('dist', '所選條件沒有可顯示的資料'); }
+    hideEmpty('dist');
+    var total = items.reduce(function (s, x) { return s + x.v; }, 0);
+    var groups = new Map(), data;
+    $('note-dist').textContent = '以' + full(i) + '、' + GLABEL[state.gender] + '計算；占比為已選行政區合計的比例。';
+    if (type === 'pie') {
+      var top = items.slice(0, 6), rest = items.slice(6);
+      data = top.map(function (x) { groups.set(x.d, [x.d]); return { id: x.d, name: x.d, value: x.v, itemStyle: { color: DCOLOR[x.d] } }; });
+      if (rest.length) {
+        var rs2 = rest.reduce(function (s, x) { return s + x.v; }, 0);
+        data.push({ id: OTHER, name: OTHER, value: rs2, itemStyle: { color: OTHER_COLOR } });
+        groups.set(OTHER, rest.map(function (x) { return x.d; }));
+        restNote.textContent = OTHER + '包含：' + rest.map(function (x) { return x.d + ' ' + fmt(x.v); }).join('、') + '。';
+        restNote.hidden = false;
+      } else restNote.hidden = true;
+    } else {
+      restNote.hidden = true;
+      data = items.map(function (x) { groups.set(x.d, [x.d]); return { id: x.d, name: x.d, value: x.v, itemStyle: { color: DCOLOR[x.d] } }; });
+    }
+    function tip(p) {
+      var name = p.name, members = groups.get(name) || [name];
+      var v = p.data.value, share = total ? (v / total * 100).toFixed(2) : '0.00';
+      var s = memberStats(i, members);
+      return '<b>' + esc(name) + '</b>（' + full(i) + '）<br/>' + GLABEL[state.gender] + '：' + fmt(v) + ' 人<br/>占已選範圍 ' + share + '%' + (s ? '<br/>' + s : '');
+    }
+    if (type === 'pie') {
+      apply('dist', 'pie', {
+        tooltip: { trigger: 'item', formatter: tip },
+        series: [{
+          id: 'dist-pop', type: 'pie', radius: '56%', center: ['50%', '52%'], data: data, universalTransition: { enabled: true },
+          label: { formatter: function (p) { return p.name + '\n' + p.percent.toFixed(2) + '%'; }, lineHeight: 16 },
+          labelLayout: { hideOverlap: true }, itemStyle: { borderColor: '#fff', borderWidth: 2 }
+        }]
+      });
+    } else {
+      apply('dist', 'bar', {
+        tooltip: { trigger: 'item', formatter: tip },
+        grid: { left: 8, right: 70, top: 12, bottom: 8, containLabel: true },
+        xAxis: { type: 'value', axisLabel: { formatter: yFmt }, splitLine: { lineStyle: { color: '#e3e9ed' } } },
+        yAxis: { type: 'category', inverse: true, data: items.map(function (x) { return x.d; }) },
+        series: [{
+          id: 'dist-pop', type: 'bar', data: data, barMaxWidth: 26, universalTransition: { enabled: true },
+          label: { show: true, position: 'right', formatter: function (p) { return fmt(p.value); } }
+        }]
+      });
+    }
+  }
+
+  function renderChange() {
+    var s = state.start, e = state.end, f = FIELD[state.gender], type = types.chg, note = $('note-chg');
+    var formula = '人口增減數＝期末人口－期初人口；人口增減率＝（期末人口－期初人口）÷ 期初人口 × 100%。';
+    if (s === e) {
+      note.textContent = formula + '目前只選了一個月份，無法比較。';
+      return showEmpty('chg', '請選擇至少兩個月份以比較人口變化');
+    }
+    var rows = active().map(function (d) {
+      var a = get(s, d, f), b = get(e, d, f);
+      if (a === null || b === null) return null;
+      var delta = b - a;
+      return { d: d, a: a, b: b, delta: delta, rate: a === 0 ? null : delta / a * 100 };
+    }).filter(Boolean);
+    var base = formula + '比較期間：' + full(s) + '（期初）→ ' + full(e) + '（期末），' + GLABEL[state.gender] + '。';
+    if (!rows.length) { note.textContent = base; return showEmpty('chg', '所選條件沒有可顯示的資料'); }
+    hideEmpty('chg');
+    rows.sort(function (x, y) {
+      if (x.rate === null && y.rate === null) return 0;
+      if (x.rate === null) return 1; if (y.rate === null) return -1;
+      return y.rate - x.rate;
+    });
+    var undef = rows.filter(function (r) { return r.rate === null; });
+    note.textContent = base + (undef.length ? '期初人口為 0 的行政區（' + undef.map(function (r) { return r.d; }).join('、') + '）無法計算增減率。' : '');
+    var byName = new Map(rows.map(function (r) { return [r.d, r]; }));
+    function col(r) { return r.rate !== null && r.rate < 0 ? '#e3002c' : '#008659'; }
+    function tipRow(r) {
+      return '<b>' + esc(r.d) + '</b><br/>期初（' + full(s) + '）：' + fmt(r.a) + ' 人<br/>期末（' + full(e) + '）：' + fmt(r.b) + ' 人<br/>增減數：' + signed(r.delta) + ' 人<br/>增減率：' + (r.rate === null ? '無法計算' : pct(r.rate));
+    }
+    if (type === 'bar') {
+      apply('chg', 'bar', {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: function (ps) { var r = rows[ps[0].dataIndex]; return r ? tipRow(r) : ''; } },
+        grid: { left: 8, right: 64, top: 12, bottom: 8, containLabel: true },
+        xAxis: { type: 'value', boundaryGap: [0.1, 0.1], axisLabel: { formatter: '{value}%' }, splitLine: { lineStyle: { color: '#e3e9ed' } } },
+        yAxis: { type: 'category', inverse: true, data: rows.map(function (r) { return r.d; }), axisLine: { show: true }, axisTick: { show: false }, axisLabel: { interval: 0 } },
+        series: [{
+          id: 'chg-dist', type: 'bar', barMaxWidth: 26, universalTransition: { enabled: true },
+          data: rows.map(function (r) {
+            return {
+              id: r.d, name: r.d, value: r.rate, itemStyle: { color: col(r) },
+              label: { show: r.rate !== null, position: r.rate !== null && r.rate < 0 ? 'left' : 'right', formatter: function () { return pct(r.rate); } }
+            };
+          })
+        }]
+      });
+    } else {
+      var pts = rows.filter(function (r) { return r.rate !== null; });
+      var maxAbs = pts.reduce(function (m, r) { return Math.max(m, Math.abs(r.delta)); }, 0);
+      apply('chg', 'scatter', {
+        tooltip: { trigger: 'item', formatter: function (p) { var r = byName.get(p.name); return r ? tipRow(r) : ''; } },
+        grid: { left: 8, right: 28, top: 28, bottom: 36, containLabel: true },
+        xAxis: { type: 'value', scale: true, name: '期末人口數（人）', nameLocation: 'middle', nameGap: 30, axisLabel: { formatter: yFmt }, splitLine: { lineStyle: { color: '#e3e9ed' } } },
+        yAxis: { type: 'value', scale: true, name: '人口增減率', axisLabel: { formatter: '{value}%' }, splitLine: { lineStyle: { color: '#e3e9ed' } } },
+        series: [{
+          id: 'chg-dist', type: 'scatter', universalTransition: { enabled: true },
+          symbolSize: function (v) { return maxAbs ? 12 + 34 * Math.sqrt(Math.abs(v[2]) / maxAbs) : 16; },
+          label: { show: true, formatter: function (p) { return p.name; }, position: 'top', fontSize: 11 },
+          markLine: { silent: true, symbol: 'none', label: { show: false }, lineStyle: { color: '#5a6a75', type: 'dashed' }, data: [{ yAxis: 0 }] },
+          data: pts.map(function (r) { return { id: r.d, name: r.d, value: [r.b, r.rate, Math.abs(r.delta)], itemStyle: { color: col(r), opacity: .85 } }; })
+        }]
+      });
+      if (!pts.length) showEmpty('chg', '期初人口皆為 0，無法計算增減率');
+    }
+  }
+
+  function update() {
+    syncUI();
+    renderSeries('pop', FIELD[state.gender], GCOLOR[state.gender], '人');
+    renderSeries('hh', 'households', HH_COLOR, '戶');
+    renderDist();
+    renderChange();
+  }
+  update();
+})();
+</script>
+</body>
+</html>
